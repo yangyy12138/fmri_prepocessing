@@ -1,5 +1,8 @@
-# 安装fmriprep，基于nipype对fmri数据进行预处理。在对数据进行处理之前，保证安装了fsl，spm，matlab。
-# 可以选择用docker封装好的fmriprep或者自己配置环境、安装依赖。因为我使用python脚本多一些，没有使用过docker，所以选择自己配置环境。
+# fMRI data preprocessing
+- install python lib fmriprep and prepocess the fmri data based on nipype lib. Before prepocessing the data, ensure that you have installed **fsl, spm and matlab**
+- 安装fmriprep，基于nipype对fmri数据进行预处理。在对数据进行处理之前，保证安装了fsl，spm，matlab。
+
+-  可以选择用docker封装好的fmriprep或者自己配置环境、安装依赖。因为我使用python脚本多一些，没有使用过docker，所以选择自己配置环境。
 ## 安装fmriprep：
 anaconda prompt
 pip install fmriprep
