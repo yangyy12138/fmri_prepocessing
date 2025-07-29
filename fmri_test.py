@@ -1,10 +1,9 @@
 ################################ fMRI Preprocessing Workflow ##################################
-# 2025-07-23   v1.0                                                                           #
+# 2025-07-23   v1.0                                                                               #
 # This script sets up a preprocessing workflow for fMRI data using Nipype.                    #
 # It is modified based on the example_prepocessing code on the nypype tutorial webpage.       #
 # https://miykael.github.io/nipype_tutorial/notebooks/example_preprocessing.html              #
 ###############################################################################################
-# WSL2 Ubuntu                                                                                 #
 # conda 25.5.1                                                                                #
 # python 3.10.18                                                                              #
 # nipype 1.10.0                                                                               #
@@ -14,20 +13,19 @@
 from os.path import join as opj
 import os
 import json
-from nipype.interfaces.fsl import (BET, ExtractROI, FAST, FLIRT, ImageMaths,
-                                   MCFLIRT, SliceTimer, Threshold, ExtractROI)
-from nipype.interfaces.spm import Smooth, SliceTiming, NewSegment
+from nipype.interfaces.fsl import (BET, ExtractROI, FAST, FLIRT, 
+                                   MCFLIRT, SliceTimer, Threshold)
+from nipype.interfaces.spm import Smooth
 from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.rapidart import ArtifactDetect
 from nipype import Workflow, Node
-from nipype.algorithms.misc import Gunzip
 
 
 
 # Specify which SPM to use
 from nipype.interfaces.matlab import MatlabCommand
-MatlabCommand.set_default_paths('/opt/spm12-r7219/spm12_mcr/spm12')
+MatlabCommand.set_default_paths('/home/jyang/spm')
 
 ### avoid error on 'forkserver'in fmriprep
 #import multiprocessing as mp
@@ -37,12 +35,14 @@ MatlabCommand.set_default_paths('/opt/spm12-r7219/spm12_mcr/spm12')
 ### This is necessary to avoid warnings related to FSL's output type
 os.environ['FSLOUTPUTTYPE']='NIFTI'
 
-experiment_dir = '/home/jyang/neuro/output'
+
+############# the following parameters are set according to the filename and content of the fMRI data #############
+experiment_dir = '/home/jyang/output'
 output_dir = 'datasink'
 working_dir = 'workingdir'
 
-# list of subject identifiers
-subject_list = ['01',]
+# list of subject identifiershome/jyang
+subject_list = ['01', ]
 
 # list of session identifiers
 task_list = ['fingerfootlips']
@@ -51,16 +51,15 @@ task_list = ['fingerfootlips']
 fwhm = [4, 8]
 
 # TR of functional images
-with open('./data/ds000114/task-fingerfootlips_bold.json', 'rt') as fp:
+with open('/home/jyang/data/ds000114/task-fingerfootlips_bold.json', 'rt') as fp:
     task_info = json.load(fp)
 TR = task_info['RepetitionTime']
 
 # Isometric resample of functional images to voxel size (in mm)
 iso_size = 4
 
-
 # ExtractROI - skip dummy scans
-extract = Node(ExtractROI(t_min=0, t_size=1, output_type='NIFTI'),
+extract = Node(ExtractROI(t_min=4, t_size=-1, output_type='NIFTI'),
                name="extract")
 
 # MCFLIRT - motion correction
@@ -117,7 +116,8 @@ coreg_pre = Node(FLIRT(dof=6, output_type='NIFTI_GZ'),
 # FLIRT - coregistration of functional images to anatomical images with BBR
 coreg_bbr = Node(FLIRT(dof=6,
                        cost='bbr',
-                       schedule=opj('/home/jyang/neuro/flirtsch/bbr.sch'),
+                       schedule=opj(os.getenv('FSLDIR'),
+                                    'etc/flirtsch/bbr.sch'),
                        output_type='NIFTI_GZ'),
                  name="coreg_bbr")
 
@@ -164,7 +164,7 @@ func_file = opj('sub-{subject_id}', 'ses-test', 'func',
 templates = {'anat': anat_file,
              'func': func_file}
 selectfiles = Node(SelectFiles(templates,
-                               base_directory='/home/jyang/neuro/data/ds000114'),
+                               base_directory='/home/jyang/data/ds000114'),
                    name="selectfiles")
 
 # Datasink - creates output folder for important outputs
@@ -187,7 +187,6 @@ subjFolders = [('fwhm-%s/' % f, 'fwhm-%s_' % f) for f in fwhm]
 substitutions.extend(subjFolders)
 datasink.inputs.substitutions = substitutions
 
-
 # Create a preprocessing workflow
 preproc = Workflow(name='preproc')
 preproc.base_dir = opj(experiment_dir, working_dir)
@@ -196,7 +195,6 @@ preproc.base_dir = opj(experiment_dir, working_dir)
 preproc.connect([(infosource, selectfiles, [('subject_id', 'subject_id'),
                                             ('task_name', 'task_name')]),
                  (selectfiles, extract, [('func', 'in_file')]),
-
                  (extract, mcflirt, [('roi_file', 'in_file')]),
                  (mcflirt, slicetimer, [('out_file', 'in_file')]),
 
@@ -221,7 +219,6 @@ preproc.connect([(infosource, selectfiles, [('subject_id', 'subject_id'),
                  (art, datasink, [('outlier_files', 'preproc.@outlier_files'),
                                   ('plot_files', 'preproc.@plot_files')]),
                  ])
-
 """
 ########### visualize the preprocessing workflow graph (optional) ###########
 
